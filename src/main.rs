@@ -35,7 +35,13 @@ fn checkIp() -> String {
                 Ok(data.len())
             }).unwrap();
 
-            transfer.perform().unwrap();
+            match transfer.perform() {
+                Err(_) => {
+                    println!("Error: TOR daemon does not seem to be active on your system");
+                    std::process::exit(1);
+                },
+                Ok(_) => {}
+            }
         }
     }
     
@@ -46,18 +52,70 @@ fn restartTor() {
     Command::new("/bin/sh").arg("-c").arg("sudo systemctl restart tor").output();
 }
 
+fn checkTorRunning() {
+    match Command::new("/bin/sh").arg("-c").arg("sudo systemctl is-active tor").output() {
+        Err(_) => {
+            println!("Error: cannot interact with systemd");
+            std::process::exit(1);
+        },
+        Ok(output) => {
+            if String::from_utf8(output.stdout).unwrap().trim() == String::from("inactive") {
+                startTor();
+            }
+        }
+    }
+}
+
+fn startTor() {
+    match Command::new("/bin/sh").arg("-c").arg("sudo systemctl start tor").status() {
+        Err(_) => {
+            println!("\x1b[91mError: TOR daemon does not seem to be enabled or installed on the system\x1b[00m");
+            std::process::exit(1);
+        },
+
+        Ok(code) => {
+            if !code.success() {
+                println!("\x1b[91mError: TOR daemon does not seem to be enabled or installed on the system\x1b[00m");
+                std::process::exit(1);
+                
+            } else {
+                println!("TOR daemon appears to not be running, starting it");
+                sleep(Duration::from_millis(1000));
+            } 
+        }
+    }
+}
+
+fn rootCheck() {
+    match Command::new("/bin/sh").arg("-c").arg("whoami").output() {
+        Err(_) => {
+            println!("Error: cannot interact with systemd");
+            std::process::exit(1);
+        },
+
+        Ok(output) => {
+            if String::from_utf8(output.stdout).unwrap().trim() != String::from("root") {
+                println!("Error: rsAutoTor requires execution as root");
+                std::process::exit(1);
+            }
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let mut interval: u64 = 2000;
 
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
-        println!("rsAutoTor: TOR network automatic ip changer written in Rust");
+        println!("rsAutoTor: TOR network automatic ip changer written in Rust (requires root)");
         println!("usage: rsAutoTor [OPTIONS]");
         println!("\nOptions:");
         println!("    -i INTERVAL     Set wait interval before changing IP (default is 2 seconds)");
         println!("    -h | --help     Show this message and exit");
         std::process::exit(0);
     }
+    
+    rootCheck();
 
     if args.contains(&"-i".to_string()) {
         let index = args.iter().position(|arg| arg == "-i").unwrap();
@@ -76,6 +134,8 @@ fn main() {
 
     println!("{}", ASCII_ART);
     println!("{} [{}]\n", AUTHOR_TAG, GITHUB_LINK);
+    
+    checkTorRunning();
     let mut stdout = stdout();
 
     loop {
