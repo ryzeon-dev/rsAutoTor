@@ -10,3 +10,6 @@ install:
 
 clean:
 	rm -rf ./bin 
+
+uninstall:
+	sudo rm -rf /usr/local/bin/rsAutoTor

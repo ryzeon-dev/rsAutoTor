@@ -9,7 +9,7 @@ Building this program requires `cargo` and `make` to be installed in the system
 ## Download, compile and install
 To download, compile and install in one command run:
 ```bash
-git clone https://gihub.com/ryzeon-dev/rsAutoTor && cd rsAutoTor && make && make install
+git clone https://gihub.com/ryzeon-dev/rsAutoTor && cd rsAutoTor && make && sudo make install
 ```
 
 ## Build
@@ -21,12 +21,12 @@ make
 ## Install
 After building, run 
 ```bash
-make install
+sudo make install
 ```
 
 ## Usage
 ```
-rsAutoTor: TOR network automatic ip changer written in Rust
+rsAutoTor: TOR network automatic ip changer written in Rust (requires root)
 usage: rsAutoTor [OPTIONS]
 
 Options:
