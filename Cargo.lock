@@ -85,7 +85,14 @@ name = "rsAutoTor"
 version = "0.2.0"
 dependencies = [
  "curl",
+ "rsjson",
 ]
+
+[[package]]
+name = "rsjson"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac866626ecefb9b5eb14905e46620b1505aae0b26e7cb3269754443d735f0dde"
 
 [[package]]
 name = "schannel"

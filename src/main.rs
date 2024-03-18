@@ -5,7 +5,7 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 use std::io::{stdout, Write};
-
+use rsjson;
 
 const ASCII_ART: &str = "
 \x1b[91m██████╗ ███████╗\x1b[96m █████╗ ██╗   ██╗████████╗ ██████╗ ████████╗ ██████╗ ██████╗ \x1b[00m
@@ -46,6 +46,74 @@ fn checkIp() -> String {
     }
     
     return String::from_utf8(buffer).unwrap().trim().to_string();
+}
+
+fn checkIpLocation(address: String) -> String {
+    // curl http://ip-api.com/json/$(curl http://checkip.amazonaws.com -x socks5://127.0.0.1:9050 --silent) --silent
+    let mut buffer = Vec::new();
+    let mut handler = Easy::new();
+
+    match handler.url(format!("http://ip-api.com/json/{}", address).as_str()) {
+
+        Err(_) => {
+            return String::new()
+
+        },
+        Ok(_) => {
+            let mut transfer = handler.transfer();
+            
+            transfer.write_function(|data| {
+                buffer.extend_from_slice(data);
+                Ok(data.len())
+            }).unwrap();
+
+            match transfer.perform() {
+                Err(_) => {
+                    println!("transform error");
+                    return String::new();
+                },
+                Ok(_) => {}
+            }
+        }
+    }
+
+    for i in 0..buffer.len() {
+        if buffer[i] > 128 {
+            buffer[i] = 42;
+        }
+    }
+    let string = String::from_utf8(buffer).unwrap();
+
+    let json = match rsjson::Json::fromString(string) {
+        Err(_) => {
+            return String::new()
+        },
+        Ok(json) => json
+    };
+
+    let city = match json.get(String::from("city")) {
+        None => String::new(),
+        Some(cityNode) => {
+            cityNode.toString().unwrap()
+        }
+    };
+
+    let country = match json.get(String::from("country")) {
+        None => String::new(),
+        Some(countryNode) => {
+            countryNode.toString().unwrap()
+        }
+    };
+
+    if country.is_empty() {
+        return format!("Unknown location");
+
+    } else if city.is_empty() {
+        return format!("{}", country);
+
+    } else {
+        return format!("{}, {}", city, country);
+    }
 }
 
 fn restartTor() {
@@ -133,16 +201,21 @@ fn main() {
     }
 
     println!("{}", ASCII_ART);
-    println!("{} [{}]\n", AUTHOR_TAG, GITHUB_LINK);
+    println!("{} [{}]\n\n", AUTHOR_TAG, GITHUB_LINK);
     
     checkTorRunning();
-    let mut stdout = stdout();
+    let mut len = 0;
 
     loop {
         let ip = checkIp();
-        
-        stdout.write(format!("\rCurrent IP: \x1b[96m{ip:<width$}\x1b[00m", ip=ip, width=15).as_bytes());
-        stdout.flush();
+        let location = checkIpLocation(ip.clone()); 
+        let line = format!("\x1b[1A\rCurrent IP: \x1b[96m{}\x1b[00m ({})", ip, location);
+
+        if line.len() > len {
+            len = line.len();
+        }
+
+        println!("{line:<len$}");
         
         restartTor();
         sleep(Duration::from_millis(interval));
