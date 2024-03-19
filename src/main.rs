@@ -4,7 +4,6 @@ use curl::easy::Easy;
 use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
-use std::io::{stdout, Write};
 use rsjson;
 
 const ASCII_ART: &str = "
